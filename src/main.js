@@ -1,9 +1,41 @@
-import './styles.css';
 import { articlePages, guideCards, researchNotes, researchPageDetails, faqItems, filters, stats, quickStartSteps, hubPages } from './content.js';
+import { localeFromPath, normalizeLocale, routeFromPath, routeWithLocale, translateRenderedHtml, translateText, localizedSeoText } from './i18n.js';
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
 const logoPath = '/favicon_io/android-chrome-512x512.png';
+let activeTemplateLocale = 'en';
+
+function templateText(value) {
+  return translateText(value, activeTemplateLocale);
+}
+
+function localizedReadTime(value) {
+  const match = String(value).match(/^(\d+)\s+min\s+read$/i);
+  if (!match || activeTemplateLocale === 'en') return value;
+  const units = { tr: 'dk okuma', de: 'Min. Lesezeit', fr: 'min de lecture' };
+  return `${match[1]} ${units[activeTemplateLocale] || 'min'}`;
+}
+
+function localizedTheatreVisual() {
+  const labels = {
+    en: ['Ottoman', 'Fronts'],
+    tr: ['Osmanlı', 'Cepheleri'],
+    de: ['Osmanische', 'Fronten'],
+    fr: ['Fronts', 'ottomans'],
+  };
+  return labels[activeTemplateLocale] || labels.en;
+}
+
+function localizedDeployTitle() {
+  const labels = {
+    en: ['BEFORE YOU', 'DEPLOY'],
+    tr: ['KONUŞLANMADAN', 'ÖNCE'],
+    de: ['VOR DEM', 'EINSATZ'],
+    fr: ['AVANT LE', 'DÉPLOIEMENT'],
+  };
+  return labels[activeTemplateLocale] || labels.en;
+}
 
 const icons = {
   arrow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>',
@@ -25,9 +57,13 @@ function cleanRoute(value) {
 
 function getRoute() {
   const hash = window.location.hash.replace(/^#/, '');
-  if (hash.startsWith('/')) return cleanRoute(hash);
-  const pathname = window.location.pathname.replace(/\/$/, '').replace(/^\//, '');
-  return !pathname || pathname === 'index.html' ? 'home' : pathname;
+  if (hash.startsWith('/')) return routeFromPath(hash);
+  return window.location.pathname.endsWith('/index.html') ? 'home' : routeFromPath(window.location.pathname);
+}
+
+function getLocale() {
+  const hash = window.location.hash.replace(/^#/, '');
+  return normalizeLocale(hash.startsWith('/') ? localeFromPath(hash) : localeFromPath(window.location.pathname));
 }
 
 function noteSlug(note) {
@@ -38,8 +74,8 @@ function stateTone(state) {
   return ['Confirmed', 'Current schedule'].includes(state) ? 'confirmed' : 'watch';
 }
 
-function routeHref(route) {
-  return route === 'home' ? '/' : `/${cleanRoute(route)}/`;
+function routeHref(route, locale = 'en') {
+  return routeWithLocale(cleanRoute(route), locale);
 }
 
 function logoTemplate() {
@@ -86,13 +122,19 @@ function hubDropdownTemplate(hub) {
   return `<div class="nav-panel" role="menu" aria-label="${label} categories"><div class="nav-panel__head"><span>FIELD MANUAL / ${hub.toUpperCase()}</span><b>${String(items.length - 1).padStart(2, '0')} ROUTES</b></div><ul class="panel-list">${items.map((item, index) => `<li><a class="panel-link js-route ${index === 0 ? 'panel-link--featured' : ''}" data-route="${item.route}" href="${routeHref(item.route)}" role="menuitem"><span class="panel-label">${item.label}</span><span class="panel-desc">${item.description}</span></a></li>`).join('')}</ul></div>`;
 }
 
-function headerTemplate(active = 'overview') {
+function languageMenuTemplate(locale = 'en') {
+  const current = normalizeLocale(locale);
+  return `<div class="language-picker"><button class="language-btn" type="button" aria-label="Change language" aria-expanded="false">${current.toUpperCase()} <span>⌄</span></button><div class="language-menu" role="menu" aria-label="Language"><a data-language-link data-locale="en" href="${routeWithLocale('home', 'en')}" class="${current === 'en' ? 'active' : ''}" role="menuitem">EN <span>English</span></a><a data-language-link data-locale="tr" href="${routeWithLocale('home', 'tr')}" class="${current === 'tr' ? 'active' : ''}" role="menuitem">TR <span>Türkçe</span></a><a data-language-link data-locale="de" href="${routeWithLocale('home', 'de')}" class="${current === 'de' ? 'active' : ''}" role="menuitem">DE <span>Deutsch</span></a><a data-language-link data-locale="fr" href="${routeWithLocale('home', 'fr')}" class="${current === 'fr' ? 'active' : ''}" role="menuitem">FR <span>Français</span></a></div></div>`;
+}
+
+function headerTemplate(active = 'overview', locale = 'en') {
   const dropdown = (hub) => `<div class="nav-item nav-item--dropdown ${active === hub ? 'active' : ''}"><a class="nav-link nav-panel-toggle" data-route="${hub}" href="${routeHref(hub)}" aria-haspopup="true" aria-expanded="false">${hub.charAt(0).toUpperCase() + hub.slice(1)} <svg class="caret" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></a>${hubDropdownTemplate(hub)}</div>`;
-  return `<header class="site-header"><a class="brand js-route" data-route="home" href="/" aria-label="Gallipoli Field Manual home">${logoTemplate()}<span class="brand-copy"><strong>GALLIPOLI</strong><small>FIELD MANUAL / WIKI</small></span></a><nav class="main-nav" aria-label="Main navigation"><a class="${active === 'overview' ? 'active' : ''} js-route" data-route="home" href="/">Overview</a>${dropdown('guides')}${dropdown('classes')}${dropdown('maps')}${dropdown('tools')}${dropdown('updates')}<a class="${active === 'research' ? 'active' : ''} js-route" data-route="research" href="/research/">Research</a><a class="${active === 'faq' ? 'active' : ''} js-route" data-route="faq" href="/faq/">FAQ</a><a class="${active === 'about' ? 'active' : ''} js-route" data-route="about" href="/about/">About</a></nav><div class="header-actions"><button class="header-search" type="button" data-focus-search aria-label="Search field manual">${icon('search')}<span>Search</span><kbd>/</kbd></button><button class="language-btn" type="button" aria-label="Change language">EN <span>⌄</span></button><button class="menu-btn" type="button" aria-label="Open menu"><span></span><span></span></button></div></header>`;
+  return `<header class="site-header"><a class="brand js-route" data-route="home" href="/" aria-label="Gallipoli Field Manual home">${logoTemplate()}<span class="brand-copy"><strong>GALLIPOLI</strong><small>FIELD MANUAL / WIKI</small></span></a><nav class="main-nav" aria-label="Main navigation"><a class="${active === 'overview' ? 'active' : ''} js-route" data-route="home" href="/">Overview</a>${dropdown('guides')}${dropdown('classes')}${dropdown('maps')}${dropdown('tools')}${dropdown('updates')}<a class="${active === 'research' ? 'active' : ''} js-route" data-route="research" href="/research/">Research</a><a class="${active === 'faq' ? 'active' : ''} js-route" data-route="faq" href="/faq/">FAQ</a><a class="${active === 'about' ? 'active' : ''} js-route" data-route="about" href="/about/">About</a></nav><div class="header-actions"><button class="header-search" type="button" data-focus-search aria-label="Search field manual">${icon('search')}<span>Search</span><kbd>/</kbd></button>${languageMenuTemplate(locale)}<button class="menu-btn" type="button" aria-label="Open menu"><span></span><span></span></button></div></header>`;
 }
 
 function footerTemplate() {
-  return `<footer class="site-footer content-width"><div class="footer-top"><a class="brand js-route" data-route="home" href="/">${logoTemplate()}<span class="brand-copy"><strong>GALLIPOLI</strong><small>FIELD MANUAL / WIKI</small></span></a><p>Independent fan-made guide site for Gallipoli — the fourth WW1 Game Series entry. Not affiliated with BlackMill Games.</p><div class="footer-links"><a href="https://store.steampowered.com/app/3065940/Gallipoli/" target="_blank" rel="noreferrer">Steam</a><a href="https://discord.com/invite/ww1gameseries" target="_blank" rel="noreferrer">Discord</a><a href="https://www.reddit.com/r/WW1GameSeries/" target="_blank" rel="noreferrer">Reddit</a></div></div><div class="footer-bottom"><span>© 2026 GALLIPOLI FIELD MANUAL</span><span>PRE-RELEASE EDITION</span><span>ENGLISH EDITION <i></i></span></div></footer>`;
+  const edition = { en: 'ENGLISH EDITION', tr: 'TÜRKÇE SÜRÜM', de: 'DEUTSCHE AUSGABE', fr: 'ÉDITION FRANÇAISE' }[activeTemplateLocale] || 'ENGLISH EDITION';
+  return `<footer class="site-footer content-width"><div class="footer-top"><a class="brand js-route" data-route="home" href="/">${logoTemplate()}<span class="brand-copy"><strong>GALLIPOLI</strong><small>FIELD MANUAL / WIKI</small></span></a><p>Independent fan-made guide site for Gallipoli — the fourth WW1 Game Series entry. Not affiliated with BlackMill Games.</p><div class="footer-links"><a href="https://www.ww1gameseries.com/gallipoli/" target="_blank" rel="noreferrer">${templateText('Official site')}</a><a href="https://store.steampowered.com/app/3065940/Gallipoli/" target="_blank" rel="noreferrer">Steam</a><a href="https://discord.com/invite/ww1gameseries" target="_blank" rel="noreferrer">Discord</a><a href="https://www.youtube.com/@WW1GameSeries" target="_blank" rel="noreferrer">YouTube</a><a href="https://steamcommunity.com/app/3065940" target="_blank" rel="noreferrer">${templateText('Community')}</a><a href="https://www.reddit.com/r/WW1GameSeries/" target="_blank" rel="noreferrer">Reddit</a></div></div><div class="footer-bottom"><span>© 2026 GALLIPOLI FIELD MANUAL</span><span>${templateText('PRE-RELEASE EDITION')}</span><span>${edition} <i></i></span></div></footer>`;
 }
 
 function quickStartTemplate() {
@@ -101,7 +143,7 @@ function quickStartTemplate() {
 
 function shellTemplate(body, active = 'overview') {
   const renderedBody = body.includes('id="top"') ? body.replace('<section class="briefing-section', `${quickStartTemplate()}<section class="briefing-section`) : body;
-  return `<div class="site-shell"><div class="ambient ambient--one"></div><div class="ambient ambient--two"></div>${headerTemplate(active)}${renderedBody}${footerTemplate()}<div class="toast" role="status" aria-live="polite"></div></div>`;
+  return `<div class="site-shell"><div class="ambient ambient--one"></div><div class="ambient ambient--two"></div>${headerTemplate(active, activeTemplateLocale)}${renderedBody}${footerTemplate()}<div class="toast" role="status" aria-live="polite"></div></div>`;
 }
 
 function guideCardTemplate(card) {
@@ -162,6 +204,11 @@ function slugToPage(route) {
   };
 }
 
+export function pageForRoute(routeInput) {
+  const route = cleanRoute(routeInput);
+  return route !== 'home' && !hubPages[route] && !['guides', 'research', 'faq', 'about'].includes(route) ? slugToPage(route) : null;
+}
+
 function legacyArticleTemplate(page) {
   const related = (page.related || []).map((slug) => articlePages[slug]).filter(Boolean);
   const articleRoute = (slug) => ['Guide', 'Mode Guide', 'Arsenal Guide'].includes(articlePages[slug]?.kind) ? `guides/${slug}` : `research/${slug}`;
@@ -185,7 +232,8 @@ function articleFaqItems(page) {
 }
 
 function articleFaqTemplate(page) {
-  return `<section class="article-faq content-width"><div class="article-faq__head"><div><div class="eyebrow">QUICK ANSWERS</div><h2>BEFORE YOU<br /><em>DEPLOY</em></h2></div><p>Three short answers related to this page. Keep the full FAQ nearby when you need the wider picture.</p></div><div class="article-faq__list">${articleFaqItems(page).map((item) => `<details class="faq-item"><summary><span class="faq-item__number">◎</span><span class="faq-item__question">${item.question}</span><span class="faq-item__toggle" aria-hidden="true"></span></summary><div class="faq-item__answer"><p>${item.answer}</p><a class="text-link js-route" data-route="faq" href="/faq/">Open full FAQ ${icon('arrow')}</a></div></details>`).join('')}</div></section>`;
+  const [deployTop, deployBottom] = localizedDeployTitle();
+  return `<section class="article-faq content-width"><div class="article-faq__head"><div><div class="eyebrow">${templateText('QUICK ANSWERS')}</div><h2>${deployTop}<br /><em>${deployBottom}</em></h2></div><p>Three short answers related to this page. Keep the full FAQ nearby when you need the wider picture.</p></div><div class="article-faq__list">${articleFaqItems(page).map((item) => `<details class="faq-item"><summary><span class="faq-item__number">◎</span><span class="faq-item__question">${item.question}</span><span class="faq-item__toggle" aria-hidden="true"></span></summary><div class="faq-item__answer"><p>${item.answer}</p><a class="text-link js-route" data-route="faq" href="/faq/">Open full FAQ ${icon('arrow')}</a></div></details>`).join('')}</div></section>`;
 }
 
 function enhancedArticleTemplate(page) {
@@ -197,7 +245,8 @@ function enhancedArticleTemplate(page) {
   const sectionLinks = (page.sections || []).map((section, index) => `<a href="#section-${index + 1}">${String(index + 1).padStart(2, '0')} ${section.heading}</a>`).join('');
   const imageStyle = page.image ? ` style="--article-image: url('${page.image}')"` : '';
   const lastUpdated = page.updated || '2026-08-17';
-  return shellTemplate(`<main class="article-page"><section class="article-hero content-width reveal"><div class="article-hero__copy"><nav class="breadcrumbs" aria-label="Breadcrumb"><a class="js-route" data-route="home" href="/">Overview</a><span>/</span><a class="js-route" data-route="${parentRoute}" href="${routeHref(parentRoute)}">${parentLabel}</a><span>/</span><span aria-current="page">${page.title}</span></nav><div class="eyebrow">${page.kind.toUpperCase()} <span class="eyebrow-divider"></span> FIELD NOTE ${page.number}</div><div class="article-meta"><span class="article-status article-status--${stateTone(page.status)}">${page.status}</span><span>${page.readTime}</span><span>${page.tag}</span></div><h1>${page.title}</h1><p>${page.intro}</p><div class="article-update"><i></i> Last updated: ${lastUpdated}</div></div><div class="article-hero__visual"${imageStyle}><div class="article-hero__stamp">GM<br /><b>${page.number}</b></div><span>FIELD MANUAL / BRIEFING</span><strong>Ottoman<br />Fronts</strong><small>PRE-RELEASE EDITION</small></div></section><section class="article-facts content-width">${page.facts.map(([label, value]) => `<div><small>${label}</small><strong>${value}</strong></div>`).join('')}</section><section class="article-content content-width"><article class="article-main"><div class="article-kicker">THE BRIEFING</div>${page.sections.map((section, index) => `<section class="article-section" id="section-${index + 1}"><h2>${section.heading}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${paragraph}</p>`).join('')}${section.bullets ? `<ul>${section.bullets.map((bullet) => `<li>${bullet}</li>`).join('')}</ul>` : ''}${section.callout ? `<div class="article-callout"><span>${section.callout.split(' / ')[0]}</span><strong>${section.callout.split(' / ').slice(1).join(' / ')}</strong></div>` : ''}</section>`).join('')}</article><aside class="article-sidebar"><div class="sidebar-block"><span class="sidebar-label">ON THIS PAGE</span>${sectionLinks}</div>${related.length ? `<div class="sidebar-block"><span class="sidebar-label">RELATED NOTES</span>${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="sidebar-link js-route" data-route="${href}" href="${routeHref(href)}">${item.title} ${icon('arrow')}</a>`; }).join('')}</div>` : ''}</aside></section>${articleFaqTemplate(page)}${related.length ? `<section class="related-section content-width"><div class="section-heading"><div><div class="eyebrow">NEXT IN THE MANUAL</div><h2>KEEP READING</h2></div><p>Follow the thread from this field note into the next practical guide.</p></div><div class="related-grid">${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="related-card js-route" data-route="${href}" href="${routeHref(href)}"><span>${item.number}</span><strong>${item.title}</strong><small>${item.kind} · ${item.readTime}</small>${icon('arrow')}</a>`; }).join('')}</div></section>` : ''}</main>`, isGuide ? 'guides' : 'research');
+  const [theatreTop, theatreBottom] = localizedTheatreVisual();
+  return shellTemplate(`<main class="article-page"><section class="article-hero content-width reveal"><div class="article-hero__copy"><nav class="breadcrumbs" aria-label="Breadcrumb"><a class="js-route" data-route="home" href="/">Overview</a><span>/</span><a class="js-route" data-route="${parentRoute}" href="${routeHref(parentRoute)}">${parentLabel}</a><span>/</span><span aria-current="page">${page.title}</span></nav><div class="eyebrow">${templateText(page.kind).toUpperCase()} <span class="eyebrow-divider"></span> ${templateText('FIELD NOTE')} ${page.number}</div><div class="article-meta"><span class="article-status article-status--${stateTone(page.status)}">${templateText(page.status)}</span><span>${localizedReadTime(page.readTime)}</span><span>${templateText(page.tag)}</span></div><h1>${page.title}</h1><p>${page.intro}</p><div class="article-update"><i></i> Last updated: ${lastUpdated}</div></div><div class="article-hero__visual"${imageStyle}><div class="article-hero__stamp">GM<br /><b>${page.number}</b></div><span>FIELD MANUAL / BRIEFING</span><strong>${theatreTop}<br />${theatreBottom}</strong><small>PRE-RELEASE EDITION</small></div></section><section class="article-facts content-width">${page.facts.map(([label, value]) => `<div><small>${templateText(label)}</small><strong>${templateText(value)}</strong></div>`).join('')}</section><section class="article-content content-width"><article class="article-main"><div class="article-kicker">THE BRIEFING</div>${page.sections.map((section, index) => `<section class="article-section" id="section-${index + 1}"><h2>${section.heading}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${paragraph}</p>`).join('')}${section.bullets ? `<ul>${section.bullets.map((bullet) => `<li>${bullet}</li>`).join('')}</ul>` : ''}${section.callout ? `<div class="article-callout"><span>${section.callout.split(' / ')[0]}</span><strong>${section.callout.split(' / ').slice(1).join(' / ')}</strong></div>` : ''}</section>`).join('')}</article><aside class="article-sidebar"><div class="sidebar-block"><span class="sidebar-label">ON THIS PAGE</span>${sectionLinks}</div>${related.length ? `<div class="sidebar-block"><span class="sidebar-label">RELATED NOTES</span>${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="sidebar-link js-route" data-route="${href}" href="${routeHref(href)}">${item.title} ${icon('arrow')}</a>`; }).join('')}</div>` : ''}</aside></section>${articleFaqTemplate(page)}${related.length ? `<section class="related-section content-width"><div class="section-heading"><div><div class="eyebrow">NEXT IN THE MANUAL</div><h2>KEEP READING</h2></div><p>Follow the thread from this field note into the next practical guide.</p></div><div class="related-grid">${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="related-card js-route" data-route="${href}" href="${routeHref(href)}"><span>${item.number}</span><strong>${item.title}</strong><small>${templateText(item.kind)} · ${localizedReadTime(item.readTime)}</small>${icon('arrow')}</a>`; }).join('')}</div></section>` : ''}</main>`, isGuide ? 'guides' : 'research');
 }
 
 function notFoundTemplate() {
@@ -225,11 +274,9 @@ function updateSchema(id, value) {
   document.head.appendChild(script);
 }
 
-function updateSeo(route, page = null) {
-  const origin = window.location.origin;
-  const canonical = new URL(routeHref(route), origin).href;
-  const isHome = route === 'home';
-  const title = page?.title || hubPages[route]?.title.replace('\n', ' ') || ({ home: 'The Field Manual', guides: 'Guide Library', research: 'Research Index', faq: 'FAQ', about: 'About Gallipoli' }[route] || 'Gallipoli Wiki');
+export function seoForRoute(routeInput, page = null, locale = 'en') {
+  const route = cleanRoute(routeInput);
+  const baseTitle = page?.title || hubPages[route]?.title.replace('\n', ' ') || ({ home: 'Gallipoli Wiki — Guides, Classes & Weapons', guides: 'Guide Library', research: 'Research Index', faq: 'FAQ', about: 'About Gallipoli' }[route] || 'Gallipoli Wiki');
   const description = page?.intro || hubPages[route]?.intro || ({
     home: 'Gallipoli Wiki — a practical field manual for classes, weapons, Expedition mode, platforms and release details.',
     guides: 'Practical Gallipoli game guides for beginners, classes, Expedition Mode and weapons progression.',
@@ -238,16 +285,25 @@ function updateSeo(route, page = null) {
     about: 'An independent player-first orientation to Gallipoli, the fourth standalone entry in the WW1 Game Series.',
   }[route] || 'Gallipoli Field Manual — practical player guides for the Ottoman Fronts.');
   const image = page?.image || hubPages[route]?.image || '/images/gallipoli-steam-background.jpg';
-  document.title = `${title} — Gallipoli Wiki`;
+  return { route, title: localizedSeoText(baseTitle, locale), description: localizedSeoText(description, locale), image, isArticle: Boolean(page), locale: normalizeLocale(locale) };
+}
+
+function updateSeo(route, page = null, locale = 'en') {
+  const origin = window.location.origin;
+  const canonical = new URL(routeHref(route, locale), origin).href;
+  const { title, description, image } = seoForRoute(route, page, locale);
+  const displayTitle = title.includes('Gallipoli Wiki') ? title : `${title} — Gallipoli Wiki`;
+  document.documentElement.lang = locale;
+  document.title = displayTitle;
   setMeta('description', description);
-  setMeta('og:title', `${title} — Gallipoli Wiki`, true);
+  setMeta('og:title', displayTitle, true);
   setMeta('og:description', description, true);
   setMeta('og:url', canonical, true);
   setMeta('og:image', new URL(image, origin).href, true);
   setMeta('og:type', page ? 'article' : 'website', true);
   setMeta('og:site_name', 'Gallipoli Wiki', true);
   setMeta('twitter:card', 'summary_large_image');
-  setMeta('twitter:title', `${title} — Gallipoli Wiki`);
+  setMeta('twitter:title', displayTitle);
   setMeta('twitter:description', description);
   setMeta('twitter:image', new URL(image, origin).href);
   let canonicalLink = document.head.querySelector('link[rel="canonical"]');
@@ -258,20 +314,22 @@ function updateSeo(route, page = null) {
   }
   canonicalLink.href = canonical;
 
-  updateSchema('site-schema', { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Gallipoli Wiki', url: origin, description: 'A practical, player-first wiki for Gallipoli and the Ottoman Fronts.' });
+  updateSchema('site-schema', { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Gallipoli Wiki', url: canonical, inLanguage: locale, description: description });
   if (route === 'faq' || page) {
     const items = route === 'faq' ? faqItems : articleFaqItems(page);
-    updateSchema('faq-schema', { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: items.map((item) => ({ '@type': 'Question', name: item.question, acceptedAnswer: { '@type': 'Answer', text: item.answer } })) });
+    updateSchema('faq-schema', { '@context': 'https://schema.org', '@type': 'FAQPage', inLanguage: locale, mainEntity: items.map((item) => ({ '@type': 'Question', name: localizedSeoText(item.question, locale), acceptedAnswer: { '@type': 'Answer', text: localizedSeoText(item.answer, locale) } })) });
   }
   if (page) {
-    updateSchema('article-schema', { '@context': 'https://schema.org', '@type': 'Article', headline: page.title, description: page.intro, dateModified: page.updated || '2026-08-17', mainEntityOfPage: canonical, image: new URL(image, origin).href, author: { '@type': 'Organization', name: 'Gallipoli Wiki' }, publisher: { '@type': 'Organization', name: 'Gallipoli Wiki' } });
+    updateSchema('article-schema', { '@context': 'https://schema.org', '@type': 'Article', headline: localizedSeoText(page.title, locale), description: localizedSeoText(page.intro, locale), dateModified: page.updated || '2026-08-17', mainEntityOfPage: canonical, image: new URL(image, origin).href, author: { '@type': 'Organization', name: 'Gallipoli Wiki' }, publisher: { '@type': 'Organization', name: 'Gallipoli Wiki' } });
   } else {
     document.head.querySelector('#article-schema')?.remove();
   }
 }
 
-function render() {
-  const route = getRoute();
+function routeTemplate(routeInput, localeInput = 'en') {
+  const route = cleanRoute(routeInput);
+  const previousLocale = activeTemplateLocale;
+  activeTemplateLocale = normalizeLocale(localeInput);
   let html = homeTemplate();
   if (route === 'guides') html = directoryTemplate();
   else if (hubPages[route]) html = hubTemplate(hubPages[route]);
@@ -282,14 +340,26 @@ function render() {
     const page = slugToPage(route);
     html = page ? enhancedArticleTemplate(page) : notFoundTemplate();
   }
-  document.querySelector('#app').innerHTML = html;
   const page = route !== 'home' && !hubPages[route] && !['guides', 'research', 'faq', 'about'].includes(route) ? slugToPage(route) : null;
-  updateSeo(route, page);
+  const localizedHtml = translateRenderedHtml(html, activeTemplateLocale);
+  activeTemplateLocale = previousLocale;
+  return { route, html: localizedHtml, page, locale: normalizeLocale(localeInput) };
+}
+
+export function renderToString(route = 'home', locale = 'en') {
+  return routeTemplate(route, locale).html;
+}
+
+export function render() {
+  const locale = getLocale();
+  const { route, html, page } = routeTemplate(getRoute(), locale);
+  document.querySelector('#app').innerHTML = html;
+  updateSeo(route, page, locale);
 }
 
 function navigate(route) {
   const target = cleanRoute(route);
-  window.history.pushState({}, '', routeHref(target));
+  window.history.pushState({}, '', routeHref(target, getLocale()));
   render();
   setupInteractions();
   window.scrollTo({ top: 0, behavior: 'instant' });
@@ -319,7 +389,8 @@ function setupInteractions() {
         note.hidden = !shouldShow;
         if (shouldShow) visible += 1;
       });
-      count.textContent = `${visible} ${visible === 1 ? 'note' : 'notes'}`;
+      const locale = getLocale();
+      count.textContent = `${visible} ${translateText(visible === 1 ? 'note' : 'notes', locale).trim()}`;
       empty.hidden = visible !== 0;
     };
     $$('.filter-btn').forEach((button) => button.addEventListener('click', () => {
@@ -385,7 +456,16 @@ function setupInteractions() {
     $('.main-nav')?.classList.toggle('open');
     $('.menu-btn')?.classList.toggle('open');
   });
-  $('.language-btn')?.addEventListener('click', () => showToast('English edition is live. Turkish is next in the language queue.'));
+  $$('[data-language-link]').forEach((link) => link.addEventListener('click', (event) => {
+    event.preventDefault();
+    window.location.assign(routeWithLocale(getRoute(), link.dataset.locale));
+  }));
+  $('.language-btn')?.addEventListener('click', () => {
+    const picker = $('.language-picker');
+    const button = $('.language-btn');
+    const open = picker?.classList.toggle('open') || false;
+    button?.setAttribute('aria-expanded', String(open));
+  });
   $$('.guide-card[data-route], .note-card[data-route]').forEach((card) => card.addEventListener('click', (event) => {
     if (event.target.closest('a')) return;
     navigate(card.dataset.route);
@@ -396,6 +476,8 @@ function setupInteractions() {
         dropdown.classList.remove('open');
         $('.nav-panel-toggle', dropdown)?.setAttribute('aria-expanded', 'false');
       });
+      $('.language-picker')?.classList.remove('open');
+      $('.language-btn')?.setAttribute('aria-expanded', 'false');
     }
     if (event.key === '/' && document.activeElement?.tagName !== 'INPUT') {
       event.preventDefault();
@@ -410,8 +492,8 @@ function setupInteractions() {
   $$('.hero .reveal, .article-hero.reveal, .directory-hero.reveal').forEach((element) => element.classList.add('is-visible'));
 }
 
-window.onpopstate = () => { render(); setupInteractions(); };
-window.onhashchange = () => { if (window.location.hash.startsWith('#/')) { render(); setupInteractions(); } };
-
-render();
-setupInteractions();
+export function initClient() {
+  window.onpopstate = () => { render(); setupInteractions(); };
+  window.onhashchange = () => { if (window.location.hash.startsWith('#/')) { render(); setupInteractions(); } };
+  setupInteractions();
+}

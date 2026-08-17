@@ -1,0 +1,20 @@
+@media (max-width: 720px) {
+  .header-search span,
+  .header-search kbd {
+    display: none;
+  }
+
+  .language-picker {
+    display: block;
+  }
+
+  .language-btn {
+    display: inline-flex;
+    height: 35px;
+    padding-inline: 8px;
+  }
+
+  .language-menu {
+    right: -5px;
+  }
+}

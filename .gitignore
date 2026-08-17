@@ -1,7 +1,9 @@
 node_modules/
+.next/
 dist/
 .playwright-cli/
 output/
+data/update-candidates.json
 .DS_Store
 
 # Internal editorial research and source material
