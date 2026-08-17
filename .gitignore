@@ -3,6 +3,7 @@ node_modules/
 dist/
 .playwright-cli/
 output/
+.seo-cache/
 data/update-candidates.json
 .DS_Store
 

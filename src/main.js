@@ -1,10 +1,16 @@
 import { articlePages, guideCards, researchNotes, researchPageDetails, faqItems, filters, stats, quickStartSteps, hubPages } from './content.js';
-import { localeFromPath, normalizeLocale, routeFromPath, routeWithLocale, translateRenderedHtml, translateText, localizedSeoText } from './i18n.js';
+import { localeConfig, localeFromPath, normalizeLocale, routeFromPath, routeWithLocale, translateRenderedHtml, translateText, localizedSeoText } from './i18n.js';
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
-const logoPath = '/favicon_io/android-chrome-512x512.png';
+const logoPath = '/favicon_io/android-chrome-192x192.webp';
 let activeTemplateLocale = 'en';
+
+function imageStyle(variable, path, extra = '') {
+  if (!path) return '';
+  const base = path.replace(/\.(avif|webp|jpe?g|png)$/i, '');
+  return ` style="${extra ? `${extra}; ` : ''}--${variable}: url('${path}'); --${variable}-modern: image-set(url('${base}.avif') type('image/avif'), url('${base}.webp') type('image/webp'), url('${path}') type('image/jpeg')); --${variable}-mobile: image-set(url('${base}-mobile.avif') type('image/avif'), url('${base}-mobile.webp') type('image/webp'), url('${path}') type('image/jpeg'))"`;
+}
 
 function templateText(value) {
   return translateText(value, activeTemplateLocale);
@@ -79,7 +85,7 @@ function routeHref(route, locale = 'en') {
 }
 
 function logoTemplate() {
-  return `<span class="brand-mark"><img src="${logoPath}" alt="" /></span>`;
+  return `<span class="brand-mark"><img src="${logoPath}" width="192" height="192" alt="" decoding="async" /></span>`;
 }
 
 const navHubItems = {
@@ -137,17 +143,21 @@ function footerTemplate() {
   return `<footer class="site-footer content-width"><div class="footer-top"><a class="brand js-route" data-route="home" href="/">${logoTemplate()}<span class="brand-copy"><strong>GALLIPOLI</strong><small>FIELD MANUAL / WIKI</small></span></a><p>Independent fan-made guide site for Gallipoli — the fourth WW1 Game Series entry. Not affiliated with BlackMill Games.</p><div class="footer-links"><a href="https://www.ww1gameseries.com/gallipoli/" target="_blank" rel="noreferrer">${templateText('Official site')}</a><a href="https://store.steampowered.com/app/3065940/Gallipoli/" target="_blank" rel="noreferrer">Steam</a><a href="https://discord.com/invite/ww1gameseries" target="_blank" rel="noreferrer">Discord</a><a href="https://www.youtube.com/@WW1GameSeries" target="_blank" rel="noreferrer">YouTube</a><a href="https://steamcommunity.com/app/3065940" target="_blank" rel="noreferrer">${templateText('Community')}</a><a href="https://www.reddit.com/r/WW1GameSeries/" target="_blank" rel="noreferrer">Reddit</a></div></div><div class="footer-bottom"><span>© 2026 GALLIPOLI FIELD MANUAL</span><span>${templateText('PRE-RELEASE EDITION')}</span><span>${edition} <i></i></span></div></footer>`;
 }
 
+function editorialTrustTemplate() {
+  return `<section class="editorial-trust content-width" aria-label="Editorial policy"><div><div class="eyebrow">EDITORIAL STANDARD</div><strong>Independent fan-made wiki</strong><p>Official developer and storefront pages lead. Preview coverage and community signals are labeled separately, and open questions stay marked until they are verified.</p></div><div class="editorial-trust__meta"><span>Last reviewed: 17 Aug 2026</span><span>Sources: developer · stores · community</span><a class="js-route" data-route="about" href="${routeHref('about')}">Read the editorial note ${icon('arrow')}</a></div></section>`;
+}
+
 function quickStartTemplate() {
   return `<section class="quick-start-section content-width" id="quick-start"><div class="section-heading section-heading--split reveal"><div><div class="eyebrow">QUICK START <span class="eyebrow-divider"></span> FIRST DEPLOYMENT</div><h2>YOUR FIRST<br /><em>DEPLOYMENT</em></h2></div><p>Use the same order a new player needs on day one: know the schedule, pick a role, read the objective and build from there.</p></div><ol class="quick-start-grid">${quickStartSteps.map((step) => `<li class="quick-start-card reveal"><span class="quick-start-card__number">${step.number}</span><div><span class="quick-start-card__label">${step.label}</span><h3>${step.title}</h3><p>${step.description}</p><a class="text-link js-route" data-route="${step.route}" href="${routeHref(step.route)}">Open route ${icon('arrow')}</a></div></li>`).join('')}</ol></section>`;
 }
 
 function shellTemplate(body, active = 'overview') {
   const renderedBody = body.includes('id="top"') ? body.replace('<section class="briefing-section', `${quickStartTemplate()}<section class="briefing-section`) : body;
-  return `<div class="site-shell"><div class="ambient ambient--one"></div><div class="ambient ambient--two"></div>${headerTemplate(active, activeTemplateLocale)}${renderedBody}${footerTemplate()}<div class="toast" role="status" aria-live="polite"></div></div>`;
+  return `<div class="site-shell"><div class="ambient ambient--one"></div><div class="ambient ambient--two"></div>${headerTemplate(active, activeTemplateLocale)}${renderedBody}${editorialTrustTemplate()}${footerTemplate()}<div class="toast" role="status" aria-live="polite"></div></div>`;
 }
 
 function guideCardTemplate(card) {
-  return `<article class="guide-card guide-card--${card.accent}" style="--card-image: url('${card.image}')" data-route="${card.href}"><div class="guide-card__top"><span class="card-number">${card.number}</span><span class="card-type">${card.type}</span>${icon(card.icon, 'guide-card__icon')}</div><div class="guide-card__body"><h3>${card.title}</h3><p>${card.description}</p></div><div class="guide-card__footer"><span>${card.meta}</span><a class="text-link js-route" data-route="${card.href}" href="${card.href}">Open guide ${icon('arrow')}</a></div></article>`;
+  return `<article class="guide-card guide-card--${card.accent}"${imageStyle('card-image', card.image)} data-route="${card.href}"><div class="guide-card__top"><span class="card-number">${card.number}</span><span class="card-type">${card.type}</span>${icon(card.icon, 'guide-card__icon')}</div><div class="guide-card__body"><h3>${card.title}</h3><p>${card.description}</p></div><div class="guide-card__footer"><span>${card.meta}</span><a class="text-link js-route" data-route="${card.href}" href="${card.href}">Open guide ${icon('arrow')}</a></div></article>`;
 }
 
 function noteTemplate(note) {
@@ -161,11 +171,11 @@ function homeTemplate() {
 
 function hubTemplate(page) {
   const [titleTop, titleBottom] = page.title.split('\n');
-  return shellTemplate(`<main class="hub-page content-width"><section class="hub-hero reveal"><div class="hub-hero__copy"><div class="eyebrow">${page.eyebrow}</div><h1>${titleTop}<br /><em>${titleBottom}</em></h1><p>${page.intro}</p><div class="hub-hero__meta"><span>${String(page.cards.length).padStart(2, '0')} routes</span><span>Player-first index</span><span>Pre-release edition</span></div></div><div class="hub-hero__visual" style="--hub-image: url('${page.image}'); --hub-accent: ${page.accent}"><span>FIELD MANUAL / HUB</span><strong>${page.active.toUpperCase()}</strong><small>READ THE FRONT BY TOPIC</small></div></section><section class="hub-grid" aria-label="${titleTop} routes">${page.cards.map((card) => `<a class="hub-card js-route" data-route="${card.route}" href="${routeHref(card.route)}" style="--hub-card-image: url('${card.image}'); --hub-accent: ${page.accent}"><span class="hub-card__number">${card.number}</span><span class="hub-card__type">${card.type}</span><h2>${card.title}</h2><p>${card.description}</p><span class="text-link">Open route ${icon('arrow')}</span></a>`).join('')}</section><section class="hub-footer"><div><div class="eyebrow">KEEP THE MANUAL CLOSE</div><p>Use the hub as a starting point, then follow each route into the full guide or research note.</p></div><a class="button button--ghost js-route" data-route="research" href="/research/">Browse research index ${icon('arrow')}</a></section></main>`, page.active);
+  return shellTemplate(`<main class="hub-page content-width"><section class="hub-hero reveal"><div class="hub-hero__copy"><div class="eyebrow">${page.eyebrow}</div><h1>${titleTop}<br /><em>${titleBottom}</em></h1><p>${page.intro}</p><div class="hub-hero__meta"><span>${String(page.cards.length).padStart(2, '0')} routes</span><span>Player-first index</span><span>Pre-release edition</span></div></div><div class="hub-hero__visual"${imageStyle('hub-image', page.image, `--hub-accent: ${page.accent}`)}><span>FIELD MANUAL / HUB</span><strong>${page.active.toUpperCase()}</strong><small>READ THE FRONT BY TOPIC</small></div></section><section class="hub-grid" aria-label="${titleTop} routes">${page.cards.map((card) => `<a class="hub-card js-route" data-route="${card.route}" href="${routeHref(card.route)}"${imageStyle('hub-card-image', card.image, `--hub-accent: ${page.accent}`)}><span class="hub-card__number">${card.number}</span><span class="hub-card__type">${card.type}</span><h2>${card.title}</h2><p>${card.description}</p><span class="text-link">Open route ${icon('arrow')}</span></a>`).join('')}</section><section class="hub-footer"><div><div class="eyebrow">KEEP THE MANUAL CLOSE</div><p>Use the hub as a starting point, then follow each route into the full guide or research note.</p></div><a class="button button--ghost js-route" data-route="research" href="/research/">Browse research index ${icon('arrow')}</a></section></main>`, page.active);
 }
 
 function directoryTemplate() {
-  return shellTemplate(`<main class="directory-page content-width"><div class="directory-hero reveal"><div><div class="eyebrow">FIELD MANUAL / 00</div><h1>THE GUIDE<br /><em>LIBRARY</em></h1></div><p>Choose a route for practical answers on objectives, classes, Expedition Mode and weapons progression.</p></div><div class="directory-grid">${guideCards.map((card) => `<a class="directory-card guide-card--${card.accent} js-route" style="--card-image: url('${card.image}')" data-route="${card.href}" href="${card.href}"><span class="directory-card__number">${card.number}</span><span class="directory-card__type">${card.type}</span>${icon(card.icon, 'directory-card__icon')}<h2>${card.title}</h2><p>${card.description}</p><span class="text-link">Open guide ${icon('arrow')}</span></a>`).join('')}</div><div class="directory-foot reveal"><div class="eyebrow">MORE IN THE INDEX</div><p>Looking for release dates, platforms, community coverage or the developer trail?</p><a class="button button--ghost js-route" data-route="research" href="/research/">Open research index ${icon('arrow')}</a></div></main>`, 'guides');
+  return shellTemplate(`<main class="directory-page content-width"><div class="directory-hero reveal"><div><div class="eyebrow">FIELD MANUAL / 00</div><h1>THE GUIDE<br /><em>LIBRARY</em></h1></div><p>Choose a route for practical answers on objectives, classes, Expedition Mode and weapons progression.</p></div><div class="directory-grid">${guideCards.map((card) => `<a class="directory-card guide-card--${card.accent} js-route"${imageStyle('card-image', card.image)} data-route="${card.href}" href="${card.href}"><span class="directory-card__number">${card.number}</span><span class="directory-card__type">${card.type}</span>${icon(card.icon, 'directory-card__icon')}<h2>${card.title}</h2><p>${card.description}</p><span class="text-link">Open guide ${icon('arrow')}</span></a>`).join('')}</div><div class="directory-foot reveal"><div class="eyebrow">MORE IN THE INDEX</div><p>Looking for release dates, platforms, community coverage or the developer trail?</p><a class="button button--ghost js-route" data-route="research" href="/research/">Open research index ${icon('arrow')}</a></div></main>`, 'guides');
 }
 
 function researchDirectoryTemplate() {
@@ -178,7 +188,7 @@ function faqTemplate() {
 }
 
 function aboutTemplate() {
-  return shellTemplate(`<main class="article-page about-page"><section class="article-hero content-width reveal"><div class="article-hero__copy"><div class="eyebrow">FIELD MANUAL / ORIENTATION</div><h1>ABOUT<br /><em>GALLIPOLI</em></h1><p>Gallipoli is a historical World War I multiplayer FPS by BlackMill Games and the fourth standalone entry in the WW1 Game Series.</p></div><div class="article-hero__visual about-visual" style="--article-image: url('/images/gallipoli-sector-desert.jpg')"><div class="about-visual__logo">${logoTemplate()}</div><span>GM–01 / 2026</span><strong>Authentic detail,<br />made playable.</strong></div></section><section class="article-content content-width"><article class="article-main"><div class="article-kicker">THE ORIENTATION</div><h2>A new front for a familiar series</h2><p>Gallipoli moves the WW1 Game Series into the Ottoman Fronts, with beach landings, desert approaches, city combat and a 50-player objective-focused format. The game combines historic classes, authentic weapons and squad decisions that make the next few metres matter.</p><p>This fan-made wiki provides beginner routes, release tracking and practical references for classes, modes, weapons and platforms.</p><div class="article-callout"><span>EDITORIAL NOTE</span><strong>This site is independent and not affiliated with BlackMill Games or the WW1 Game Series.</strong></div><h2>What this wiki covers</h2><div class="coverage-grid"><div><b>01</b><strong>Guides</strong><span>Beginner, classes, Expedition and weapons.</span></div><div><b>02</b><strong>Research</strong><span>19 keyword trails with visible status labels.</span></div><div><b>03</b><strong>Platforms</strong><span>PC, PS5, Xbox and storefront notes.</span></div><div><b>04</b><strong>Community</strong><span>Reviews, Reddit and launch listening posts.</span></div></div></article><aside class="article-sidebar"><div class="sidebar-block"><span class="sidebar-label">AT A GLANCE</span><div class="sidebar-facts"><span><small>DEVELOPER</small><b>BlackMill Games</b></span><span><small>GENRE</small><b>Historical tactical FPS</b></span><span><small>BATTLE SIZE</small><b>50 players</b></span><span><small>STATUS</small><b class="facts-status"><i></i> Pre-release</b></span></div></div><div class="sidebar-block"><span class="sidebar-label">CONTINUE READING</span><a class="sidebar-link js-route" data-route="guides" href="/guides/">Guide library ${icon('arrow')}</a><a class="sidebar-link js-route" data-route="research" href="/research/">Research index ${icon('arrow')}</a></div></aside></section></main>`, 'about');
+  return shellTemplate(`<main class="article-page about-page"><section class="article-hero content-width reveal"><div class="article-hero__copy"><div class="eyebrow">FIELD MANUAL / ORIENTATION</div><h1>ABOUT<br /><em>GALLIPOLI</em></h1><p>Gallipoli is a historical World War I multiplayer FPS by BlackMill Games and the fourth standalone entry in the WW1 Game Series.</p></div><div class="article-hero__visual about-visual"${imageStyle('article-image', '/images/gallipoli-sector-desert.jpg')}><div class="about-visual__logo">${logoTemplate()}</div><span>GM–01 / 2026</span><strong>Authentic detail,<br />made playable.</strong></div></section><section class="article-content content-width"><article class="article-main"><div class="article-kicker">THE ORIENTATION</div><h2>A new front for a familiar series</h2><p>Gallipoli moves the WW1 Game Series into the Ottoman Fronts, with beach landings, desert approaches, city combat and a 50-player objective-focused format. The game combines historic classes, authentic weapons and squad decisions that make the next few metres matter.</p><p>This fan-made wiki provides beginner routes, release tracking and practical references for classes, modes, weapons and platforms.</p><div class="article-callout"><span>EDITORIAL NOTE</span><strong>This site is independent and not affiliated with BlackMill Games or the WW1 Game Series.</strong></div><h2>What this wiki covers</h2><div class="coverage-grid"><div><b>01</b><strong>Guides</strong><span>Beginner, classes, Expedition and weapons.</span></div><div><b>02</b><strong>Research</strong><span>19 keyword trails with visible status labels.</span></div><div><b>03</b><strong>Platforms</strong><span>PC, PS5, Xbox and storefront notes.</span></div><div><b>04</b><strong>Community</strong><span>Reviews, Reddit and launch listening posts.</span></div></div></article><aside class="article-sidebar"><div class="sidebar-block"><span class="sidebar-label">AT A GLANCE</span><div class="sidebar-facts"><span><small>DEVELOPER</small><b>BlackMill Games</b></span><span><small>GENRE</small><b>Historical tactical FPS</b></span><span><small>BATTLE SIZE</small><b>50 players</b></span><span><small>STATUS</small><b class="facts-status"><i></i> Pre-release</b></span></div></div><div class="sidebar-block"><span class="sidebar-label">CONTINUE READING</span><a class="sidebar-link js-route" data-route="guides" href="/guides/">Guide library ${icon('arrow')}</a><a class="sidebar-link js-route" data-route="research" href="/research/">Research index ${icon('arrow')}</a></div></aside></section></main>`, 'about');
 }
 
 function slugToPage(route) {
@@ -213,11 +223,11 @@ function legacyArticleTemplate(page) {
   const related = (page.related || []).map((slug) => articlePages[slug]).filter(Boolean);
   const articleRoute = (slug) => ['Guide', 'Mode Guide', 'Arsenal Guide'].includes(articlePages[slug]?.kind) ? `guides/${slug}` : `research/${slug}`;
   const sectionLinks = (page.sections || []).map((section, index) => `<a href="#section-${index + 1}">${String(index + 1).padStart(2, '0')} ${section.heading}</a>`).join('');
-  const imageStyle = page.image ? ` style="--article-image: url('${page.image}')"` : '';
-  return shellTemplate(`<main class="article-page"><section class="article-hero content-width reveal"><div class="article-hero__copy"><div class="eyebrow">${page.kind.toUpperCase()} <span class="eyebrow-divider"></span> FIELD NOTE ${page.number}</div><div class="article-meta"><span class="article-status article-status--${stateTone(page.status)}">${page.status}</span><span>${page.readTime}</span><span>${page.tag}</span></div><h1>${page.title}</h1><p>${page.intro}</p></div><div class="article-hero__visual"${imageStyle}><div class="article-hero__stamp">GM<br /><b>${page.number}</b></div><span>FIELD MANUAL / BRIEFING</span><strong>Ottoman<br />Fronts</strong><small>PRE-RELEASE EDITION</small></div></section><section class="article-facts content-width">${page.facts.map(([label, value]) => `<div><small>${label}</small><strong>${value}</strong></div>`).join('')}</section><section class="article-content content-width"><article class="article-main"><div class="article-kicker">THE BRIEFING</div>${page.sections.map((section, index) => `<section class="article-section" id="section-${index + 1}"><h2>${section.heading}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${paragraph}</p>`).join('')}${section.bullets ? `<ul>${section.bullets.map((bullet) => `<li>${bullet}</li>`).join('')}</ul>` : ''}${section.callout ? `<div class="article-callout"><span>${section.callout.split(' / ')[0]}</span><strong>${section.callout.split(' / ').slice(1).join(' / ')}</strong></div>` : ''}</section>`).join('')}</article><aside class="article-sidebar"><div class="sidebar-block"><span class="sidebar-label">ON THIS PAGE</span>${sectionLinks}</div>${related.length ? `<div class="sidebar-block"><span class="sidebar-label">RELATED NOTES</span>${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="sidebar-link js-route" data-route="${href}" href="${routeHref(href)}">${item.title} ${icon('arrow')}</a>`; }).join('')}</div>` : ''}</aside></section>${related.length ? `<section class="related-section content-width"><div class="section-heading"><div><div class="eyebrow">NEXT IN THE MANUAL</div><h2>KEEP READING</h2></div><p>Follow the thread from this field note into the next practical guide.</p></div><div class="related-grid">${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="related-card js-route" data-route="${href}" href="${routeHref(href)}"><span>${item.number}</span><strong>${item.title}</strong><small>${item.kind} · ${item.readTime}</small>${icon('arrow')}</a>`; }).join('')}</div></section>` : ''}</main>`, page.kind === 'Guide' || page.kind === 'Mode Guide' || page.kind === 'Arsenal Guide' ? 'guides' : 'research');
+  const imageStyleValue = page.image ? imageStyle('article-image', page.image) : '';
+  return shellTemplate(`<main class="article-page"><section class="article-hero content-width reveal"><div class="article-hero__copy"><div class="eyebrow">${page.kind.toUpperCase()} <span class="eyebrow-divider"></span> FIELD NOTE ${page.number}</div><div class="article-meta"><span class="article-status article-status--${stateTone(page.status)}">${page.status}</span><span>${page.readTime}</span><span>${page.tag}</span></div><h1>${page.title}</h1><p>${page.intro}</p></div><div class="article-hero__visual"${imageStyleValue}><div class="article-hero__stamp">GM<br /><b>${page.number}</b></div><span>FIELD MANUAL / BRIEFING</span><strong>Ottoman<br />Fronts</strong><small>PRE-RELEASE EDITION</small></div></section><section class="article-facts content-width">${page.facts.map(([label, value]) => `<div><small>${label}</small><strong>${value}</strong></div>`).join('')}</section><section class="article-content content-width"><article class="article-main"><div class="article-kicker">THE BRIEFING</div>${page.sections.map((section, index) => `<section class="article-section" id="section-${index + 1}"><h2>${section.heading}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${paragraph}</p>`).join('')}${section.bullets ? `<ul>${section.bullets.map((bullet) => `<li>${bullet}</li>`).join('')}</ul>` : ''}${section.callout ? `<div class="article-callout"><span>${section.callout.split(' / ')[0]}</span><strong>${section.callout.split(' / ').slice(1).join(' / ')}</strong></div>` : ''}</section>`).join('')}</article><aside class="article-sidebar"><div class="sidebar-block"><span class="sidebar-label">ON THIS PAGE</span>${sectionLinks}</div>${related.length ? `<div class="sidebar-block"><span class="sidebar-label">RELATED NOTES</span>${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="sidebar-link js-route" data-route="${href}" href="${routeHref(href)}">${item.title} ${icon('arrow')}</a>`; }).join('')}</div>` : ''}</aside></section>${related.length ? `<section class="related-section content-width"><div class="section-heading"><div><div class="eyebrow">NEXT IN THE MANUAL</div><h2>KEEP READING</h2></div><p>Follow the thread from this field note into the next practical guide.</p></div><div class="related-grid">${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="related-card js-route" data-route="${href}" href="${routeHref(href)}"><span>${item.number}</span><strong>${item.title}</strong><small>${item.kind} · ${item.readTime}</small>${icon('arrow')}</a>`; }).join('')}</div></section>` : ''}</main>`, page.kind === 'Guide' || page.kind === 'Mode Guide' || page.kind === 'Arsenal Guide' ? 'guides' : 'research');
 }
 
-function articleFaqItems(page) {
+export function articleFaqItems(page) {
   const title = `${page.title} ${page.intro}`.toLowerCase();
   if (title.includes('platform') || title.includes('mac') || title.includes('xbox') || title.includes('ps5') || title.includes('price')) {
     return faqItems.filter((item) => item.category === 'Platforms & store').slice(0, 3);
@@ -236,6 +246,10 @@ function articleFaqTemplate(page) {
   return `<section class="article-faq content-width"><div class="article-faq__head"><div><div class="eyebrow">${templateText('QUICK ANSWERS')}</div><h2>${deployTop}<br /><em>${deployBottom}</em></h2></div><p>Three short answers related to this page. Keep the full FAQ nearby when you need the wider picture.</p></div><div class="article-faq__list">${articleFaqItems(page).map((item) => `<details class="faq-item"><summary><span class="faq-item__number">◎</span><span class="faq-item__question">${item.question}</span><span class="faq-item__toggle" aria-hidden="true"></span></summary><div class="faq-item__answer"><p>${item.answer}</p><a class="text-link js-route" data-route="faq" href="/faq/">Open full FAQ ${icon('arrow')}</a></div></details>`).join('')}</div></section>`;
 }
 
+function answerSummaryTemplate(page) {
+  return `<section class="answer-summary content-width" aria-label="Quick answer"><div><div class="eyebrow">QUICK ANSWER <span class="eyebrow-divider"></span> ${templateText(page.status)}</div><p>${page.intro}</p></div><div class="answer-summary__meta"><span>LAST REVIEWED</span><time datetime="${page.updated || '2026-08-17'}">${page.updated || '2026-08-17'}</time><span>EDITORIAL STATUS</span><strong>${templateText(page.status)}</strong></div></section>`;
+}
+
 function enhancedArticleTemplate(page) {
   const related = (page.related || []).map((slug) => articlePages[slug]).filter(Boolean);
   const isGuide = ['Guide', 'Mode Guide', 'Arsenal Guide'].includes(page.kind);
@@ -243,10 +257,10 @@ function enhancedArticleTemplate(page) {
   const parentLabel = isGuide ? 'Guide library' : 'Research index';
   const articleRoute = (slug) => ['Guide', 'Mode Guide', 'Arsenal Guide'].includes(articlePages[slug]?.kind) ? `guides/${slug}` : `research/${slug}`;
   const sectionLinks = (page.sections || []).map((section, index) => `<a href="#section-${index + 1}">${String(index + 1).padStart(2, '0')} ${section.heading}</a>`).join('');
-  const imageStyle = page.image ? ` style="--article-image: url('${page.image}')"` : '';
+  const imageStyleValue = page.image ? imageStyle('article-image', page.image) : '';
   const lastUpdated = page.updated || '2026-08-17';
   const [theatreTop, theatreBottom] = localizedTheatreVisual();
-  return shellTemplate(`<main class="article-page"><section class="article-hero content-width reveal"><div class="article-hero__copy"><nav class="breadcrumbs" aria-label="Breadcrumb"><a class="js-route" data-route="home" href="/">Overview</a><span>/</span><a class="js-route" data-route="${parentRoute}" href="${routeHref(parentRoute)}">${parentLabel}</a><span>/</span><span aria-current="page">${page.title}</span></nav><div class="eyebrow">${templateText(page.kind).toUpperCase()} <span class="eyebrow-divider"></span> ${templateText('FIELD NOTE')} ${page.number}</div><div class="article-meta"><span class="article-status article-status--${stateTone(page.status)}">${templateText(page.status)}</span><span>${localizedReadTime(page.readTime)}</span><span>${templateText(page.tag)}</span></div><h1>${page.title}</h1><p>${page.intro}</p><div class="article-update"><i></i> Last updated: ${lastUpdated}</div></div><div class="article-hero__visual"${imageStyle}><div class="article-hero__stamp">GM<br /><b>${page.number}</b></div><span>FIELD MANUAL / BRIEFING</span><strong>${theatreTop}<br />${theatreBottom}</strong><small>PRE-RELEASE EDITION</small></div></section><section class="article-facts content-width">${page.facts.map(([label, value]) => `<div><small>${templateText(label)}</small><strong>${templateText(value)}</strong></div>`).join('')}</section><section class="article-content content-width"><article class="article-main"><div class="article-kicker">THE BRIEFING</div>${page.sections.map((section, index) => `<section class="article-section" id="section-${index + 1}"><h2>${section.heading}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${paragraph}</p>`).join('')}${section.bullets ? `<ul>${section.bullets.map((bullet) => `<li>${bullet}</li>`).join('')}</ul>` : ''}${section.callout ? `<div class="article-callout"><span>${section.callout.split(' / ')[0]}</span><strong>${section.callout.split(' / ').slice(1).join(' / ')}</strong></div>` : ''}</section>`).join('')}</article><aside class="article-sidebar"><div class="sidebar-block"><span class="sidebar-label">ON THIS PAGE</span>${sectionLinks}</div>${related.length ? `<div class="sidebar-block"><span class="sidebar-label">RELATED NOTES</span>${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="sidebar-link js-route" data-route="${href}" href="${routeHref(href)}">${item.title} ${icon('arrow')}</a>`; }).join('')}</div>` : ''}</aside></section>${articleFaqTemplate(page)}${related.length ? `<section class="related-section content-width"><div class="section-heading"><div><div class="eyebrow">NEXT IN THE MANUAL</div><h2>KEEP READING</h2></div><p>Follow the thread from this field note into the next practical guide.</p></div><div class="related-grid">${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="related-card js-route" data-route="${href}" href="${routeHref(href)}"><span>${item.number}</span><strong>${item.title}</strong><small>${templateText(item.kind)} · ${localizedReadTime(item.readTime)}</small>${icon('arrow')}</a>`; }).join('')}</div></section>` : ''}</main>`, isGuide ? 'guides' : 'research');
+  return shellTemplate(`<main class="article-page"><section class="article-hero content-width reveal"><div class="article-hero__copy"><nav class="breadcrumbs" aria-label="Breadcrumb"><a class="js-route" data-route="home" href="/">Overview</a><span>/</span><a class="js-route" data-route="${parentRoute}" href="${routeHref(parentRoute)}">${parentLabel}</a><span>/</span><span aria-current="page">${page.title}</span></nav><div class="eyebrow">${templateText(page.kind).toUpperCase()} <span class="eyebrow-divider"></span> ${templateText('FIELD NOTE')} ${page.number}</div><div class="article-meta"><span class="article-status article-status--${stateTone(page.status)}">${templateText(page.status)}</span><span>${localizedReadTime(page.readTime)}</span><span>${templateText(page.tag)}</span></div><h1>${page.title}</h1><p>${page.intro}</p><div class="article-update"><i></i> Last updated: ${lastUpdated}</div></div><div class="article-hero__visual"${imageStyleValue}><div class="article-hero__stamp">GM<br /><b>${page.number}</b></div><span>FIELD MANUAL / BRIEFING</span><strong>${theatreTop}<br />${theatreBottom}</strong><small>PRE-RELEASE EDITION</small></div></section>${answerSummaryTemplate(page)}<section class="article-facts content-width">${page.facts.map(([label, value]) => `<div><small>${templateText(label)}</small><strong>${templateText(value)}</strong></div>`).join('')}</section><section class="article-content content-width"><article class="article-main"><div class="article-kicker">THE BRIEFING</div>${page.sections.map((section, index) => `<section class="article-section" id="section-${index + 1}"><h2>${section.heading}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${paragraph}</p>`).join('')}${section.bullets ? `<ul>${section.bullets.map((bullet) => `<li>${bullet}</li>`).join('')}</ul>` : ''}${section.callout ? `<div class="article-callout"><span>${section.callout.split(' / ')[0]}</span><strong>${section.callout.split(' / ').slice(1).join(' / ')}</strong></div>` : ''}</section>`).join('')}</article><aside class="article-sidebar"><div class="sidebar-block"><span class="sidebar-label">ON THIS PAGE</span>${sectionLinks}</div>${related.length ? `<div class="sidebar-block"><span class="sidebar-label">RELATED NOTES</span>${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="sidebar-link js-route" data-route="${href}" href="${routeHref(href)}">${item.title} ${icon('arrow')}</a>`; }).join('')}</div>` : ''}</aside></section>${articleFaqTemplate(page)}${related.length ? `<section class="related-section content-width"><div class="section-heading"><div><div class="eyebrow">NEXT IN THE MANUAL</div><h2>KEEP READING</h2></div><p>Follow the thread from this field note into the next practical guide.</p></div><div class="related-grid">${related.map((item) => { const slug = Object.keys(articlePages).find((key) => articlePages[key] === item); const href = articleRoute(slug); return `<a class="related-card js-route" data-route="${href}" href="${routeHref(href)}"><span>${item.number}</span><strong>${item.title}</strong><small>${templateText(item.kind)} · ${localizedReadTime(item.readTime)}</small>${icon('arrow')}</a>`; }).join('')}</div></section>` : ''}</main>`, isGuide ? 'guides' : 'research');
 }
 
 function notFoundTemplate() {
@@ -274,6 +288,66 @@ function updateSchema(id, value) {
   document.head.appendChild(script);
 }
 
+const seoTitleOverrides = {
+  faq: { en: 'Gallipoli FAQ: Release & Gameplay', tr: 'Gallipoli SSS: Çıkış ve Oynanış', de: 'Gallipoli FAQ: Veröffentlichung & Gameplay', fr: 'FAQ Gallipoli : sortie et gameplay' },
+  classes: { en: 'Gallipoli Classes & Loadouts', tr: 'Gallipoli Sınıflar ve Teçhizat', de: 'Gallipoli Klassen & Ausrüstung', fr: 'Gallipoli Classes et équipement' },
+  maps: { en: 'Gallipoli Maps & Ottoman Fronts', tr: 'Gallipoli Haritaları ve Osmanlı Cepheleri', de: 'Gallipoli Karten & Osmanische Fronten', fr: 'Cartes et fronts ottomans de Gallipoli' },
+  tools: { en: 'Gallipoli Player Tools & Quick Start', tr: 'Gallipoli Oyuncu Araçları ve Hızlı Başlangıç', de: 'Gallipoli Spieler-Tools & Schnellstart', fr: 'Outils et démarrage rapide de Gallipoli' },
+  updates: { en: 'Gallipoli Release & Updates', tr: 'Gallipoli Çıkış ve Güncellemeler', de: 'Gallipoli Release & Status', fr: 'Sortie et actualités de Gallipoli' },
+  'guides/expedition-mode': { en: 'Gallipoli Expedition Mode Guide', tr: 'Gallipoli Sefer Modu Rehberi', de: 'Gallipoli Expeditionsmodus-Leitfaden', fr: 'Guide du mode Expédition de Gallipoli' },
+  'research/02-gallipoli-game-release-date': { en: 'Gallipoli Release Date: August 20, 2026', tr: 'Gallipoli Çıkış Tarihi: 20 Ağustos 2026', de: 'Gallipoli Release: 20. August 2026', fr: 'Date de sortie de Gallipoli : 20 août 2026' },
+  'research/05-gallipoli-game-gameplay': { en: 'Gallipoli Gameplay & Expedition', tr: 'Gallipoli Oynanış ve Sefer', de: 'Gallipoli Gameplay & Expedition Guide', fr: 'Gameplay et Expédition de Gallipoli' },
+  'research/06-gallipoli-game-single-player': { en: 'Gallipoli Single-Player & Bots', tr: 'Gallipoli Tek Oyuncu ve Botlar', de: 'Gallipoli Einzelspieler & Bots', fr: 'Solo et bots dans Gallipoli' },
+  'research/13-gallipoli-game-epic-games': { en: 'Gallipoli on Epic Games Store', tr: 'Gallipoli Epic Games Store', de: 'Gallipoli im Epic Games Store', fr: 'Gallipoli sur Epic Games Store' },
+  'research/16-gallipoli-game-reddit': { en: 'Gallipoli Reddit & Community', tr: 'Gallipoli Reddit ve Topluluk', de: 'Gallipoli Reddit & Community Signals', fr: 'Reddit et communauté Gallipoli' },
+  'research/17-gallipoli-game-wiki': { en: 'Gallipoli Wiki: Game Reference', tr: 'Gallipoli Wikisi: Oyun Rehberi', de: 'Gallipoli-Wiki: Spielreferenz', fr: 'Wiki Gallipoli : référence du jeu' },
+  'research/18-gallipoli-game-steam-chart': { en: 'Gallipoli Steam Charts & Players', tr: 'Gallipoli Steam İstatistikleri ve Oyuncular', de: 'Gallipoli Steam-Charts & Spielerzahlen', fr: 'Statistiques Steam et joueurs de Gallipoli' },
+  'research/19-gallipoli-game-blackmill-games': { en: 'BlackMill Games: Gallipoli Developer', tr: 'BlackMill Games: Gallipoli Geliştiricisi', de: 'BlackMill Games: Entwickler von Gallipoli', fr: 'BlackMill Games : développeur de Gallipoli' },
+};
+
+const seoDescriptionSuffix = {
+  en: ' Read the latest official details, player guidance and pre-release status.',
+  tr: ' Güncel resmî ayrıntıları, oyuncu rehberlerini ve çıkış öncesi durumu okuyun.',
+  de: ' Lies aktuelle offizielle Details, Spielerhilfen und den Stand vor der Veröffentlichung.',
+  fr: ' Consultez les informations officielles, les guides et l’état de pré-sortie.',
+};
+
+const seoEditionSuffix = {
+  tr: 'Türkçe sürüm',
+  de: 'Deutsche Ausgabe',
+  fr: 'édition française',
+};
+
+function localizedSeoValue(route, value, locale, overrides) {
+  const direct = overrides[route]?.[locale];
+  if (direct) return direct;
+  const translated = localizedSeoText(value, locale);
+  if (locale !== 'en' && translated === value) return `${translated} · ${seoEditionSuffix[locale]}`;
+  return translated;
+}
+
+function fitSeoDescription(value, locale) {
+  let description = value;
+  if (description.length < 120) description += seoDescriptionSuffix[locale] || seoDescriptionSuffix.en;
+  if (description.length <= 165) return description;
+  const clipped = description.slice(0, 162).replace(/\s+\S*$/, '').replace(/[,:;—-]+$/, '').trim();
+  return `${clipped}…`;
+}
+
+export function formatSeoTitle(routeInput, title, locale = 'en') {
+  const route = cleanRoute(routeInput);
+  let value = localizedSeoValue(route, title, normalizeLocale(locale), seoTitleOverrides);
+  const brand = 'Gallipoli Wiki';
+  const suffix = ` — ${brand}`;
+  if (value.length > 60 && value.includes(' · ')) value = value.split(' · ')[0];
+  if (!value.includes(brand) && value.length + suffix.length > 60) {
+    const available = 60 - suffix.length;
+    value = `${value.slice(0, available).replace(/\s+\S*$/, '').trim()}…`;
+  }
+  const formatted = value.includes(brand) ? value : `${value}${suffix}`;
+  return formatted.length > 60 ? formatted.slice(0, 60).replace(/\s+\S*$/, '').replace(/[—–,:;]+$/, '').trim() : formatted;
+}
+
 export function seoForRoute(routeInput, page = null, locale = 'en') {
   const route = cleanRoute(routeInput);
   const baseTitle = page?.title || hubPages[route]?.title.replace('\n', ' ') || ({ home: 'Gallipoli Wiki — Guides, Classes & Weapons', guides: 'Guide Library', research: 'Research Index', faq: 'FAQ', about: 'About Gallipoli' }[route] || 'Gallipoli Wiki');
@@ -284,15 +358,17 @@ export function seoForRoute(routeInput, page = null, locale = 'en') {
     faq: 'Answers to common Gallipoli questions about release timing, gameplay, classes, platforms and store status.',
     about: 'An independent player-first orientation to Gallipoli, the fourth standalone entry in the WW1 Game Series.',
   }[route] || 'Gallipoli Field Manual — practical player guides for the Ottoman Fronts.');
+  const normalizedLocale = normalizeLocale(locale);
+  const localizedDescription = localizedSeoValue(route, description, normalizedLocale, {});
   const image = page?.image || hubPages[route]?.image || '/images/gallipoli-steam-background.jpg';
-  return { route, title: localizedSeoText(baseTitle, locale), description: localizedSeoText(description, locale), image, isArticle: Boolean(page), locale: normalizeLocale(locale) };
+  return { route, title: seoTitleOverrides[route]?.[normalizedLocale] || localizedSeoText(baseTitle, normalizedLocale), description: fitSeoDescription(localizedDescription, normalizedLocale), image, isArticle: Boolean(page), locale: normalizedLocale };
 }
 
 function updateSeo(route, page = null, locale = 'en') {
   const origin = window.location.origin;
   const canonical = new URL(routeHref(route, locale), origin).href;
   const { title, description, image } = seoForRoute(route, page, locale);
-  const displayTitle = title.includes('Gallipoli Wiki') ? title : `${title} — Gallipoli Wiki`;
+  const displayTitle = formatSeoTitle(route, title, locale);
   document.documentElement.lang = locale;
   document.title = displayTitle;
   setMeta('description', description);

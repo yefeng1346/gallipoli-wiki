@@ -1,9 +1,10 @@
 import SiteClient from '../../src/SiteClient.jsx';
-import { articlePages, hubPages, researchNotes } from '../../src/content.js';
-import { pageForRoute, renderToString, seoForRoute } from '../../src/main.js';
+import StructuredData from '../../src/StructuredData.jsx';
+import { allRoutes } from '../../src/site-routes.js';
+import { formatSeoTitle, pageForRoute, renderToString, seoForRoute } from '../../src/main.js';
 import { localeConfig, normalizeLocale, routeWithLocale, supportedLocales } from '../../src/i18n.js';
 
-const guideKinds = new Set(['Guide', 'Mode Guide', 'Arsenal Guide']);
+const SITE_URL = 'https://www.gallipoligame.wiki';
 
 function contextFromParams(params) {
   const segments = Array.isArray(params?.slug) ? [...params.slug] : [];
@@ -13,12 +14,6 @@ function contextFromParams(params) {
 
 function canonicalPath(route, locale = 'en') {
   return routeWithLocale(route, locale);
-}
-
-function allRoutes() {
-  const articleRoutes = Object.entries(articlePages).map(([slug, page]) => `${guideKinds.has(page.kind) ? 'guides' : 'research'}/${slug}`);
-  const noteRoutes = researchNotes.map((note) => `research/${note.slug}`);
-  return ['home', 'guides', 'research', 'faq', 'about', ...Object.keys(hubPages), ...articleRoutes, ...noteRoutes];
 }
 
 export function generateStaticParams() {
@@ -32,34 +27,49 @@ export async function generateMetadata({ params }) {
   const { route, locale } = contextFromParams(await params);
   const page = pageForRoute(route);
   const seo = seoForRoute(route, page, locale);
-  const title = seo.title.includes('Gallipoli Wiki') ? seo.title : `${seo.title} — Gallipoli Wiki`;
-  const canonical = canonicalPath(route, locale);
+  const title = formatSeoTitle(route, seo.title, locale);
+  const canonical = new URL(canonicalPath(route, locale), SITE_URL).toString();
+  const languages = Object.fromEntries(
+    supportedLocales.map((item) => [
+      localeConfig[item].htmlLang,
+      new URL(canonicalPath(route, item), SITE_URL).toString(),
+    ]),
+  );
+  languages['x-default'] = new URL(canonicalPath(route, 'en'), SITE_URL).toString();
+  const image = new URL(seo.image, SITE_URL).toString();
   return {
     title,
     description: seo.description,
+    authors: [{ name: 'Gallipoli Wiki editorial team' }],
+    creator: 'Gallipoli Wiki editorial team',
+    publisher: 'Gallipoli Wiki',
     alternates: {
       canonical,
-      languages: Object.fromEntries(supportedLocales.map((item) => [localeConfig[item].htmlLang, canonicalPath(route, item)])),
+      languages,
     },
     openGraph: {
       title,
       description: seo.description,
       url: canonical,
       type: seo.isArticle ? 'article' : 'website',
-      images: [seo.image],
+      images: [image],
     },
     twitter: {
       title,
       description: seo.description,
-      images: [seo.image],
+      images: [image],
     },
   };
 }
 
 export default async function Page({ params }) {
   const { route, locale } = contextFromParams(await params);
+  const page = pageForRoute(route);
+  const seo = seoForRoute(route, page, locale);
+  const canonical = new URL(canonicalPath(route, locale), SITE_URL).toString();
   return (
     <>
+      <StructuredData route={route} locale={locale} page={page} seo={seo} canonical={canonical} />
       <div id="app" dangerouslySetInnerHTML={{ __html: renderToString(route, locale) }} />
       <SiteClient />
     </>
