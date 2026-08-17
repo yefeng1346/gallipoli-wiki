@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const CANONICAL_HOST = 'www.gallipoligame.wiki';
-const LEGACY_HOSTS = new Set([
-  'gallipoli.wiki',
-  'www.gallipoli.wiki',
+const REDIRECT_HOSTS = new Set([
   'gallipoligame.wiki',
 ]);
 
@@ -12,7 +10,7 @@ export function middleware(request) {
   const requestHost = forwardedHost || request.headers.get('host') || request.nextUrl.hostname;
   const hostname = requestHost.split(',')[0].trim().split(':')[0].toLowerCase();
 
-  if (LEGACY_HOSTS.has(hostname)) {
+  if (REDIRECT_HOSTS.has(hostname)) {
     const url = request.nextUrl.clone();
     url.protocol = 'https:';
     url.hostname = CANONICAL_HOST;
