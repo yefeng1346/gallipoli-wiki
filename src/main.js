@@ -85,7 +85,7 @@ function routeHref(route, locale = 'en') {
 }
 
 function logoTemplate() {
-  return `<span class="brand-mark"><img src="${logoPath}" width="192" height="192" alt="" decoding="async" /></span>`;
+  return `<span class="brand-mark"><img src="${logoPath}" width="192" height="192" alt="Gallipoli Wiki logo" decoding="async" /></span>`;
 }
 
 const navHubItems = {
@@ -329,8 +329,8 @@ function localizedSeoValue(route, value, locale, overrides) {
 function fitSeoDescription(value, locale) {
   let description = value;
   if (description.length < 120) description += seoDescriptionSuffix[locale] || seoDescriptionSuffix.en;
-  if (description.length <= 165) return description;
-  const clipped = description.slice(0, 162).replace(/\s+\S*$/, '').replace(/[,:;—-]+$/, '').trim();
+  if (description.length <= 160) return description;
+  const clipped = description.slice(0, 159).replace(/\s+\S*$/, '').replace(/[,:;—-]+$/, '').trim();
   return `${clipped}…`;
 }
 
