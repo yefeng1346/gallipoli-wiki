@@ -1,0 +1,67 @@
+name: Watch official Gallipoli updates
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * *'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the wiki
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check official sources
+        id: watch
+        continue-on-error: true
+        run: npm run watch:official > update-candidates.json
+
+      - name: Upload review candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: gallipoli-update-candidate
+          path: update-candidates.json
+          if-no-files-found: error
+
+      - name: Open or update review issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const candidate = JSON.parse(fs.readFileSync('update-candidates.json', 'utf8'));
+            if (candidate.status !== 'review-required') return;
+            const title = '[Update review] Official Gallipoli data changed';
+            const body = [
+              'The scheduled official-source check found a change.',
+              '',
+              '```json',
+              JSON.stringify(candidate, null, 2),
+              '```',
+              '',
+              'Review the linked official pages, then update the content and locale copy manually before publishing.',
+            ].join('\n');
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+            });
+            const issue = existing.find((item) => item.title === title);
+            if (issue) {
+              await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issue.number, body });
+            } else {
+              await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body });
+            }
