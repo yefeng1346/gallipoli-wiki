@@ -31,6 +31,15 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-SKP8P4S15K" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-SKP8P4S15K');`,
+          }}
+        />
         <link rel="preload" as="image" href="/images/gallipoli-steam-background.avif" type="image/avif" media="(min-width: 761px)" />
         <link rel="preload" as="image" href="/images/gallipoli-steam-background-mobile.avif" type="image/avif" media="(max-width: 760px)" />
         <script
