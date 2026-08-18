@@ -8,11 +8,8 @@ export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: 'Gallipoli Wiki — Guides, Classes & Weapons',
   description: 'Gallipoli Wiki — a practical field manual for classes, weapons, Expedition mode, platforms and release details.',
+  manifest: '/favicon_io/site.webmanifest',
   icons: {
-    icon: [
-      { url: '/favicon_io/favicon.ico' },
-      { url: '/favicon_io/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
-    ],
     apple: '/favicon_io/apple-touch-icon.png',
   },
   openGraph: {
