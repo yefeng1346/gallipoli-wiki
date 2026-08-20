@@ -30,6 +30,11 @@ export default function RootLayout({ children }) {
       <head>
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-SKP8P4S15K" />
         <script
+          async="async"
+          data-cfasync="false"
+          src="https://staffresumed.com/a96883afe0ac9e788c209bad83b67040/invoke.js"
+        />
+        <script
           dangerouslySetInnerHTML={{
             __html: `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
@@ -45,7 +50,10 @@ gtag('config', 'G-SKP8P4S15K');`,
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <div id="container-a96883afe0ac9e788c209bad83b67040" />
+      </body>
     </html>
   );
 }
