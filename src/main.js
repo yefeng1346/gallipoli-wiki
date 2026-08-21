@@ -4,6 +4,7 @@ import { localeConfig, localeFromPath, normalizeLocale, routeFromPath, routeWith
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
 const logoPath = '/favicon_io/android-chrome-192x192.webp';
+const AD_CONTAINER_ID = 'container-a96883afe0ac9e788c209bad83b67040';
 let activeTemplateLocale = 'en';
 
 function imageStyle(variable, path, extra = '') {
@@ -147,13 +148,34 @@ function editorialTrustTemplate() {
   return `<section class="editorial-trust content-width" aria-label="Editorial policy"><div><div class="eyebrow">EDITORIAL STANDARD</div><strong>Independent fan-made wiki</strong><p>Official developer and storefront pages lead. Preview coverage and community signals are labeled separately, and open questions stay marked until they are verified.</p></div><div class="editorial-trust__meta"><span>Last reviewed: 17 Aug 2026</span><span>Sources: developer · stores · community</span><a class="js-route" data-route="about" href="${routeHref('about')}">Read the editorial note ${icon('arrow')}</a></div></section>`;
 }
 
+function adSlotTemplate() {
+  return '<div class="ad-slot" data-ad-slot aria-label="Advertisement"></div>';
+}
+
+function insertAdSlot(body) {
+  const placements = [
+    [/(<section class="hero section-frame">[\s\S]*?<\/section>)(<section class="stat-rail)/, `$1${adSlotTemplate()}$2`],
+    [/(<section class="hub-hero reveal">[\s\S]*?<\/section>)(<section class="hub-grid)/, `$1${adSlotTemplate()}$2`],
+    [/(<div class="directory-hero reveal">[\s\S]*?)(<div class="directory-grid)/, `$1${adSlotTemplate()}$2`],
+    [/(<div class="directory-hero reveal">[\s\S]*?)(<div class="research-layout research-layout--page)/, `$1${adSlotTemplate()}$2`],
+    [/(<section class="faq-hero reveal">[\s\S]*?<\/section>)(<section class="faq-layout)/, `$1${adSlotTemplate()}$2`],
+    [/(<section class="article-hero content-width reveal">[\s\S]*?<\/section>)(<section class="(?:article-facts|answer-summary|article-content))/, `$1${adSlotTemplate()}$2`],
+  ];
+
+  for (const [pattern, replacement] of placements) {
+    if (pattern.test(body)) return body.replace(pattern, replacement);
+  }
+  return `${body}${adSlotTemplate()}`;
+}
+
 function quickStartTemplate() {
   return `<section class="quick-start-section content-width" id="quick-start"><div class="section-heading section-heading--split reveal"><div><div class="eyebrow">QUICK START <span class="eyebrow-divider"></span> FIRST DEPLOYMENT</div><h2>YOUR FIRST<br /><em>DEPLOYMENT</em></h2></div><p>Use the same order a new player needs on day one: know the schedule, pick a role, read the objective and build from there.</p></div><ol class="quick-start-grid">${quickStartSteps.map((step) => `<li class="quick-start-card reveal"><span class="quick-start-card__number">${step.number}</span><div><span class="quick-start-card__label">${step.label}</span><h3>${step.title}</h3><p>${step.description}</p><a class="text-link js-route" data-route="${step.route}" href="${routeHref(step.route)}">Open route ${icon('arrow')}</a></div></li>`).join('')}</ol></section>`;
 }
 
 function shellTemplate(body, active = 'overview') {
   const renderedBody = body.includes('id="top"') ? body.replace('<section class="briefing-section', `${quickStartTemplate()}<section class="briefing-section`) : body;
-  return `<div class="site-shell"><div class="ambient ambient--one"></div><div class="ambient ambient--two"></div>${headerTemplate(active, activeTemplateLocale)}${renderedBody}${editorialTrustTemplate()}${footerTemplate()}<div class="toast" role="status" aria-live="polite"></div></div>`;
+  const bodyWithAd = insertAdSlot(renderedBody);
+  return `<div class="site-shell"><div class="ambient ambient--one"></div><div class="ambient ambient--two"></div>${headerTemplate(active, activeTemplateLocale)}${bodyWithAd}${editorialTrustTemplate()}${footerTemplate()}<div class="toast" role="status" aria-live="polite"></div></div>`;
 }
 
 function guideCardTemplate(card) {
@@ -426,10 +448,25 @@ export function renderToString(route = 'home', locale = 'en') {
   return routeTemplate(route, locale).html;
 }
 
+function detachAdContainer(app) {
+  const container = document.getElementById(AD_CONTAINER_ID);
+  if (container && app?.contains(container)) document.body.appendChild(container);
+}
+
+function mountAdContainer(app) {
+  const slot = $('[data-ad-slot]', app);
+  const container = document.getElementById(AD_CONTAINER_ID);
+  if (slot && container && container.parentElement !== slot) slot.appendChild(container);
+}
+
 export function render() {
   const locale = getLocale();
   const { route, html, page } = routeTemplate(getRoute(), locale);
-  document.querySelector('#app').innerHTML = html;
+  const app = document.querySelector('#app');
+  if (!app) return;
+  detachAdContainer(app);
+  app.innerHTML = html;
+  mountAdContainer(app);
   updateSeo(route, page, locale);
 }
 
